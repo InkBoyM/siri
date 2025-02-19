@@ -156,6 +156,11 @@
         this.reloadBtn.addEventListener('click', () => this.reload());
         this.goBtn.addEventListener('click', () => this.navigate());
         this.newTabBtn.addEventListener('click', () => this.createTab());
+        this.urlInput.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') {
+            this.navigate();
+          }
+        });
       }
       createTab() {
         if (this.tabs.length >= 5) return;
