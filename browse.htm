@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Browser Interface</title>
+  <title>Browser Intfdsfee</title>
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <style>
     * {
@@ -117,6 +117,7 @@
         <button id="back" class="control-btn">&#9664;</button>
         <button id="forward" class="control-btn">&#9654;</button>
         <button id="reload" class="control-btn">&#10227;</button>
+        <button id="fullscreen" class="control-btn">⛶</button>
       </div>
       <div id="url-bar">
         <input type="text" id="url-input" placeholder="Enter URL...">
@@ -147,6 +148,7 @@
         this.backBtn = document.getElementById('back');
         this.forwardBtn = document.getElementById('forward');
         this.reloadBtn = document.getElementById('reload');
+        this.fullscreenBtn = document.getElementById('fullscreen');
         this.goBtn = document.getElementById('go');
         this.newTabBtn = document.getElementById('new-tab');
       }
@@ -154,6 +156,7 @@
         this.backBtn.addEventListener('click', () => this.goBack());
         this.forwardBtn.addEventListener('click', () => this.goForward());
         this.reloadBtn.addEventListener('click', () => this.reload());
+        this.fullscreenBtn.addEventListener('click', () => this.toggleFullscreen());
         this.goBtn.addEventListener('click', () => this.navigate());
         this.newTabBtn.addEventListener('click', () => this.createTab());
         this.urlInput.addEventListener('keypress', (e) => {
@@ -207,6 +210,21 @@
         if (this.currentIndex.get(this.activeTabId) < history.length - 1) {
           this.currentIndex.set(this.activeTabId, this.currentIndex.get(this.activeTabId) + 1);
           this.renderContent();
+        }
+      }
+      reload() {
+        this.renderContent();
+      }
+      toggleFullscreen() {
+        const embed = this.contentContainer.querySelector('embed');
+        if (embed) {
+          if (!document.fullscreenElement) {
+            embed.requestFullscreen().catch(err => {
+              console.log(`Error attempting to enable fullscreen: ${err.message}`);
+            });
+          } else {
+            document.exitFullscreen();
+          }
         }
       }
     }
