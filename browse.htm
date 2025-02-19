@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Browser Intfdsfee</title>
+  <title>Browser Interface</title>
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <style>
     * {
@@ -17,7 +17,7 @@
       flex-direction: column;
     }
     #browser {
-      background: white;
+      background: var(--theme-color, white);
       margin: 20px;
       border-radius: 8px;
       box-shadow: 0 2px 10px rgba(0,0,0,0.1);
@@ -28,7 +28,7 @@
     }
     #toolbar {
       padding: 10px;
-      background: #f8f9fa;
+      background: var(--theme-color-secondary, #f8f9fa);
       border-bottom: 1px solid #ddd;
       display: flex;
       gap: 10px;
@@ -61,7 +61,7 @@
     }
     #tabs-bar {
       display: flex;
-      background: #f8f9fa;
+      background: var(--theme-color-secondary, #f8f9fa);
       padding: 5px 10px 0;
       border-bottom: 1px solid #ddd;
     }
@@ -77,7 +77,7 @@
       align-items: center;
       gap: 5px;
       padding: 8px 15px;
-      background: #e9ecef;
+      background: var(--theme-color-secondary, #e9ecef);
       border: 1px solid #ddd;
       border-bottom: none;
       border-radius: 8px 8px 0 0;
@@ -85,7 +85,7 @@
       min-width: 100px;
     }
     .tab.active {
-      background: white;
+      background: var(--theme-color, white);
     }
     #content-container {
       flex: 1;
@@ -107,6 +107,16 @@
       width: 100%;
       height: 100%;
       border: none;
+    }
+    .settings-page {
+      padding: 20px;
+      color: #333;
+    }
+    .settings-section {
+      margin-bottom: 20px;
+    }
+    .color-picker {
+      margin: 10px 0;
     }
   </style>
 </head>
@@ -137,10 +147,39 @@
         this.activeTabId = null;
         this.history = new Map();
         this.currentIndex = new Map();
+        this.settings = this.loadSettings();
         this.initElements();
         this.bindEvents();
-        this.createTab();
+        this.applyTheme();
+        
+        // Check if this is the first time opening
+        if (!localStorage.getItem('browserInitialized')) {
+          localStorage.setItem('browserInitialized', 'true');
+          this.createTab('ksf://settings');
+        } else {
+          this.createTab(this.settings.defaultNewTab);
+        }
       }
+
+      loadSettings() {
+        const defaultSettings = {
+          defaultNewTab: 'google.com',
+          themeColor: '#ffffff',
+          themeColorSecondary: '#f8f9fa'
+        };
+        return JSON.parse(localStorage.getItem('browserSettings')) || defaultSettings;
+      }
+
+      saveSettings() {
+        localStorage.setItem('browserSettings', JSON.stringify(this.settings));
+        this.applyTheme();
+      }
+
+      applyTheme() {
+        document.documentElement.style.setProperty('--theme-color', this.settings.themeColor);
+        document.documentElement.style.setProperty('--theme-color-secondary', this.settings.themeColorSecondary);
+      }
+
       initElements() {
         this.tabsContainer = document.getElementById('tabs-container');
         this.contentContainer = document.getElementById('content-container');
@@ -152,6 +191,7 @@
         this.goBtn = document.getElementById('go');
         this.newTabBtn = document.getElementById('new-tab');
       }
+
       bindEvents() {
         this.backBtn.addEventListener('click', () => this.goBack());
         this.forwardBtn.addEventListener('click', () => this.goForward());
@@ -165,15 +205,18 @@
           }
         });
       }
-      createTab() {
+
+      createTab(initialUrl) {
         if (this.tabs.length >= 5) return;
         const tabId = Date.now();
-        this.tabs.push({ id: tabId, url: 'google.com' });
-        this.history.set(tabId, ['google.com']);
+        const url = initialUrl || this.settings.defaultNewTab;
+        this.tabs.push({ id: tabId, url: url });
+        this.history.set(tabId, [url]);
         this.currentIndex.set(tabId, 0);
         this.renderTabs();
         this.setActiveTab(tabId);
       }
+
       setActiveTab(tabId) {
         this.activeTabId = tabId;
         const tab = this.tabs.find(t => t.id === tabId);
@@ -181,15 +224,87 @@
         this.renderTabs();
         this.renderContent();
       }
+
       renderTabs() {
         this.tabsContainer.innerHTML = this.tabs.map(tab => `
           <div class="tab ${tab.id === this.activeTabId ? 'active' : ''}" onclick="browser.setActiveTab(${tab.id})">
             ${tab.url}
           </div>`).join('');
       }
+
       renderContent() {
-        this.contentContainer.innerHTML = `<embed src="https://x.linu.gq:9441/ns?u=https://${this.tabs.find(t => t.id === this.activeTabId).url}/">`;
+        const tab = this.tabs.find(t => t.id === this.activeTabId);
+        if (tab.url === 'ksf://settings') {
+          this.renderSettings();
+        } else {
+          this.contentContainer.innerHTML = `<embed src="https://x.linu.gq:9441/ns?u=https://${tab.url}/">`;
+        }
       }
+
+      renderSettings() {
+        this.contentContainer.innerHTML = `
+          <div class="settings-page">
+            <h2>Browser Settings</h2>
+            
+            <div class="settings-section">
+              <h3>Default New Tab Page</h3>
+              <select id="default-tab" onchange="browser.updateDefaultTab(this.value)">
+                <option value="google.com" ${this.settings.defaultNewTab === 'google.com' ? 'selected' : ''}>Google</option>
+                <option value="bing.com" ${this.settings.defaultNewTab === 'bing.com' ? 'selected' : ''}>Bing</option>
+                <option value="custom" ${!['google.com', 'bing.com'].includes(this.settings.defaultNewTab) ? 'selected' : ''}>Custom</option>
+              </select>
+              <input type="text" id="custom-url" 
+                placeholder="Enter custom URL" 
+                value="${!['google.com', 'bing.com'].includes(this.settings.defaultNewTab) ? this.settings.defaultNewTab : ''}"
+                onchange="browser.updateCustomUrl(this.value)"
+                style="margin-left: 10px;">
+            </div>
+
+            <div class="settings-section">
+              <h3>Theme Colors</h3>
+              <div class="color-picker">
+                <label>Main Theme Color:</label>
+                <input type="color" value="${this.settings.themeColor}" 
+                  onchange="browser.updateThemeColor(this.value)">
+              </div>
+              <div class="color-picker">
+                <label>Secondary Theme Color:</label>
+                <input type="color" value="${this.settings.themeColorSecondary}" 
+                  onchange="browser.updateThemeColorSecondary(this.value)">
+              </div>
+            </div>
+          </div>`;
+      }
+
+      updateDefaultTab(value) {
+        if (value === 'custom') {
+          const customUrl = document.getElementById('custom-url').value;
+          if (customUrl) {
+            this.settings.defaultNewTab = customUrl;
+          }
+        } else {
+          this.settings.defaultNewTab = value;
+        }
+        this.saveSettings();
+      }
+
+      updateCustomUrl(value) {
+        if (document.getElementById('default-tab').value === 'custom') {
+          this.settings.defaultNewTab = value;
+          this.saveSettings();
+        }
+      }
+
+      updateThemeColor(color) {
+        this.settings.themeColor = color;
+        this.saveSettings();
+      }
+
+      updateThemeColorSecondary(color) {
+        this.settings.themeColorSecondary = color;
+        this.saveSettings();
+      }
+
       navigate() {
         const url = this.urlInput.value.trim();
         const tab = this.tabs.find(t => t.id === this.activeTabId);
@@ -198,6 +313,7 @@
         this.currentIndex.set(tab.id, this.history.get(tab.id).length - 1);
         this.renderContent();
       }
+
       goBack() {
         const history = this.history.get(this.activeTabId);
         if (this.currentIndex.get(this.activeTabId) > 0) {
@@ -205,6 +321,7 @@
           this.renderContent();
         }
       }
+
       goForward() {
         const history = this.history.get(this.activeTabId);
         if (this.currentIndex.get(this.activeTabId) < history.length - 1) {
@@ -212,9 +329,11 @@
           this.renderContent();
         }
       }
+
       reload() {
         this.renderContent();
       }
+
       toggleFullscreen() {
         const embed = this.contentContainer.querySelector('embed');
         if (embed) {
