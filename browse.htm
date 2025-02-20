@@ -11,10 +11,11 @@
     }
     body {
       font-family: Arial, sans-serif;
-      background: #f0f0f0;
+      background: var(--background-color, #f0f0f0);
       height: 100vh;
       display: flex;
       flex-direction: column;
+      transition: background 0.3s, color 0.3s;
     }
     #browser {
       background: var(--theme-color, white);
@@ -43,6 +44,7 @@
       padding: 5px;
       cursor: pointer;
       border-radius: 4px;
+      transition: background 0.3s;
     }
     .control-btn:hover {
       background: #e9ecef;
@@ -83,6 +85,7 @@
       border-radius: 8px 8px 0 0;
       cursor: pointer;
       min-width: 100px;
+      transition: background 0.3s;
     }
     .tab.active {
       background: var(--theme-color, white);
@@ -118,6 +121,17 @@
     .color-picker {
       margin: 10px 0;
     }
+    .dark-mode {
+      --background-color: #121212;
+      --theme-color: #1e1e1e;
+      --theme-color-secondary: #2c2c2c;
+      color: white;
+    }
+    .close-tab {
+      cursor: pointer;
+      color: red;
+      margin-left: 10px;
+    }
   </style>
 </head>
 <body>
@@ -152,7 +166,6 @@
         this.bindEvents();
         this.applyTheme();
         
-        // Check if this is the first time opening
         if (!localStorage.getItem('browserInitialized')) {
           localStorage.setItem('browserInitialized', 'true');
           this.createTab('ksf://settings');
@@ -165,7 +178,8 @@
         const defaultSettings = {
           defaultNewTab: 'google.com',
           themeColor: '#ffffff',
-          themeColorSecondary: '#f8f9fa'
+          themeColorSecondary: '#f8f9fa',
+          darkMode: false
         };
         return JSON.parse(localStorage.getItem('browserSettings')) || defaultSettings;
       }
@@ -178,6 +192,7 @@
       applyTheme() {
         document.documentElement.style.setProperty('--theme-color', this.settings.themeColor);
         document.documentElement.style.setProperty('--theme-color-secondary', this.settings.themeColorSecondary);
+        document.body.classList.toggle('dark-mode', this.settings.darkMode);
       }
 
       initElements() {
@@ -229,6 +244,7 @@
         this.tabsContainer.innerHTML = this.tabs.map(tab => `
           <div class="tab ${tab.id === this.activeTabId ? 'active' : ''}" onclick="browser.setActiveTab(${tab.id})">
             ${tab.url}
+            <span class="close-tab" onclick="event.stopPropagation(); browser.closeTab(${tab.id})">✖</span>
           </div>`).join('');
       }
 
@@ -273,7 +289,29 @@
                   onchange="browser.updateThemeColorSecondary(this.value)">
               </div>
             </div>
+
+            <div class="settings-section">
+              <h3>Dark Mode</h3>
+              <label>
+                <input type="checkbox" id="dark-mode-toggle" ${this.settings.darkMode ? 'checked' : ''} onchange="browser.toggleDarkMode(this.checked)">
+                Enable Dark Mode
+              </label>
+            </div>
           </div>`;
+      }
+
+      toggleDarkMode(isEnabled) {
+        this.settings.darkMode = isEnabled;
+        this.saveSettings();
+      }
+
+      closeTab(tabId) {
+        this.tabs = this.tabs.filter(tab => tab.id !== tabId);
+        if (this.activeTabId === tabId) {
+          this.activeTabId = this.tabs.length ? this.tabs[this.tabs.length - 1].id : null;
+        }
+        this.renderTabs();
+        this.renderContent();
       }
 
       updateDefaultTab(value) {
